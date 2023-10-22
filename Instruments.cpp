@@ -36,6 +36,11 @@ EuropeanCall::EuropeanCall(double S0, double strike, double volatility, double m
 {
 }
 
+EuropeanCall* EuropeanCall::DeepClone() const
+{
+	return new EuropeanCall(*this); // this calls the copy constructor of EuropeanCall which is a deep copy
+}
+
 double EuropeanCall::getOptionSign() const
 {
 	// S-K
@@ -44,6 +49,11 @@ double EuropeanCall::getOptionSign() const
 
 EuropeanPut::EuropeanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : EuropeanOption(S0, strike, volatility, maturity, riskFreeRate)
 {
+}
+
+EuropeanPut* EuropeanPut::DeepClone() const
+{
+	return new EuropeanPut(*this); // this calls the copy constructor of EuropeanCall which is a deep copy
 }
 
 double EuropeanPut::getOptionSign() const

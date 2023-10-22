@@ -9,7 +9,7 @@ int main()
     double strike = 100;
     double S0 = 100;
     double volatility = 0.30;
-    double riskFreeRate = 1.0;
+    double riskFreeRate = 0.1;
     double maturity = 0.2;
 
     std::unique_ptr<QuantModels> modelMC(new BasicMonteCarlo(nbMonteCarloSteps, spaceStep));

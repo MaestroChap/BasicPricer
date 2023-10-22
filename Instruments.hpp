@@ -26,6 +26,8 @@ class EuropeanOption : public Instrument
 public:
 	EuropeanOption(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	EuropeanOption(const EuropeanOption& instr); // deep copy
+	virtual EuropeanOption* DeepClone() const = 0;
+
 	virtual double getOptionSign() const = 0;
 
 	double getStrike() { return m_strike; }
@@ -49,6 +51,8 @@ class EuropeanCall : public EuropeanOption
 public:
 	EuropeanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	EuropeanCall(const EuropeanCall& instr) : EuropeanOption(instr) {};
+	virtual EuropeanCall* DeepClone() const override;
+
 	virtual double getOptionSign() const override;
 };
 
@@ -57,6 +61,8 @@ class EuropeanPut : public EuropeanOption
 public:
 	EuropeanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	EuropeanPut(const EuropeanCall& instr) : EuropeanOption(instr) {};
+	virtual EuropeanPut* DeepClone() const override;
+
 	virtual double getOptionSign() const override;
 
 

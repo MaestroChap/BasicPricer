@@ -76,8 +76,7 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 {
 	// this function prices the product after bumping the value corresponding to the key by h
 		
-	//todo std::unique_ptr<EuropeanOption> bumpedInstr(instr->DeepClone());
-	std::unique_ptr<EuropeanOption>& bumpedInstr = instr;
+	std::unique_ptr<EuropeanOption> bumpedInstr(instr->DeepClone());
 	if (key == GreekKey::Delta)
 		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
 	else if (key == GreekKey::Vega)
