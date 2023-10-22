@@ -127,13 +127,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BlackScholes.cpp" />
+    <ClCompile Include="Instruments.cpp" />
+    <ClCompile Include="interface.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MonteCarlo.cpp" />
+    <ClCompile Include="Maths.cpp" />
+    <ClCompile Include="QuantModels.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BlackScholes.hpp" />
-    <ClInclude Include="MonteCarlo.hpp" />
+    <ClInclude Include="Instruments.hpp" />
+    <ClInclude Include="interface.hpp" />
+    <ClInclude Include="Maths.hpp" />
+    <ClInclude Include="QuantModels.hpp" />
+    <ClInclude Include="typedefs.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

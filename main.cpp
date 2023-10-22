@@ -1,43 +1,28 @@
 #include <iostream>
-#include "MonteCarlo.hpp"
-#include "BlackScholes.hpp"
+#include "interface.hpp"
 
 int main()
 {
+    int nbMonteCarloSteps = 100000;
+    double spaceStep = 0.01;
 
-    BlackScholes::PutEuro Call1(100, 100, 0.05, 1, 0.30);
+    double strike = 100;
+    double S0 = 100;
+    double volatility = 0.30;
+    double riskFreeRate = 1.0;
+    double maturity = 0.2;
 
-    MonteCarlo::PutEuro Call2(100, 100, 0.05, 1, 0.30);
+    std::unique_ptr<QuantModels> modelMC(new BasicMonteCarlo(nbMonteCarloSteps, spaceStep));
+    std::unique_ptr<QuantModels> modelBS(new BlackScholes(spaceStep));
+    std::unique_ptr<EuropeanOption> callOpt (new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
+    //std::unique_ptr<EuropeanOption> putOpt(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate));
 
-
-    std::cout << "Prix de l'option avec BlackScholes : " <<Call1.optionPrice() << std::endl;
-    std::cout << "Prix de l'option avec MC : " << Call2.optionPrice() << std::endl;
-
-    std::unordered_map<std::string, double> vec;
-    vec = Call2.optionGrecques(0.01);
-
+    auto callGreeksMC = PriceAndGreeks(callOpt, modelMC);
+    auto callPriceBS = PriceAndGreeks(callOpt, modelBS);
+    std::cout << "prix du call via MC" << std::endl;
+    display(callGreeksMC);
     std::cout << std::endl;
-
-    std::cout << std::endl;
-
-
-
-    for (std::unordered_map<std::string, double>::iterator it = vec.begin(); it != vec.end(); it++)
-    {
-        std::cout << it->first << " avec MC : " << it->second << std::endl;
-    }
-
-    std::cout << std::endl;
-
-    std::cout << std::endl;
-
-    std::unordered_map<std::string, double> vec1;
-
-    vec1 = Call1.optionGrecques();
-
-    for (std::unordered_map<std::string, double>::iterator it = vec1.begin(); it != vec1.end(); it++)
-    {
-        std::cout << it->first << " avec BS : " << it->second << std::endl;
-    }
+    std::cout << "prix du call via BS" << std::endl;
+    display(callPriceBS);
     return 0;
 }
