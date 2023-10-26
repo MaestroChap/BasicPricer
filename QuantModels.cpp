@@ -20,10 +20,6 @@ std::cout << "Il faut n = " << pow((2 * var * 1.96) / l, 2) << ", pour avoir une
 */
 
 
-QuantModels::QuantModels(const double spaceStep) : m_SpaceStep(spaceStep)
-{
-}
-
 MonteCarlo::MonteCarlo(const Unt timeSamples, const double spaceStep) : m_TimeSamples(timeSamples), QuantModels(spaceStep)
 {
 	m_Samples = std::vector<double>();
@@ -59,11 +55,11 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 	double vol{ instr->getVolatility() };
 	double rfr{ instr->getRiskFreeRate() };
 	double mat{ instr->getMaturity() };
-	double K  { instr->getStrike() };
+	double K{ instr->getStrike() };
 
 	for (int i = 0; i < m_Samples.size(); i++)
 	{
-		S_T = S_0 * std::exp((rfr - pow(vol, 2) * 0.5) * mat + vol * std::sqrt(mat) * m_Samples[i]); // On utilise la formule explicite de S_T pour ne pas avoir à resimuler un MB
+		S_T = S_0 * std::exp((rfr - pow(vol, 2) * 0.5) * mat + vol * std::sqrt(mat) * m_Samples[i]); // Explicit S_T formula
 		payoff = std::max(std::exp(-rfr * mat) * instr->getOptionSign() * (S_T - K), 0.);
 		A[i] = payoff;
 	}
@@ -75,7 +71,7 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key)
 {
 	// this function prices the product after bumping the value corresponding to the key by h
-		
+
 	std::unique_ptr<EuropeanOption> bumpedInstr(instr->DeepClone());
 	if (key == GreekKey::Delta)
 		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
@@ -85,12 +81,9 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 		bumpedInstr->setRiskFreeRate(bumpedInstr->getRiskFreeRate() + m_SpaceStep);
 	else if (key == GreekKey::Theta)
 		bumpedInstr->setMaturity(bumpedInstr->getMaturity() + m_SpaceStep);
-	// todo gamma 
-	//else if (key == GreekKey::Gamma)
-	//	bumpedInstr->setS0(bumpedInstr->getR + m_SpaceStep);
-
+	else if (key == GreekKey::Gamma)
+		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
 	return europeanOptionPrice(bumpedInstr);
-
 }
 
 GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr)
@@ -102,14 +95,17 @@ GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOpt
 	double priceBumpVega = europeanOptionPrice(instr, GreekKey::Vega);
 	double priceBumpTheta = europeanOptionPrice(instr, GreekKey::Theta);
 	double priceBumpRho = europeanOptionPrice(instr, GreekKey::Rho);
+	double priceBumpGamma = europeanOptionPrice(instr, GreekKey::Gamma);
+
+	m_SpaceStep = -m_SpaceStep;
+	double priceDumpGamma = europeanOptionPrice(instr, GreekKey::Gamma); //False gamma
+	m_SpaceStep = -m_SpaceStep;
 
 	double delta = (priceBumpDelta - price) / m_SpaceStep;
 	double vega = (priceBumpVega - price) / m_SpaceStep;
 	double theta = (priceBumpTheta - price) / m_SpaceStep;
-	double rho   = (priceBumpRho - price) / m_SpaceStep;
-
-	//todo gamma
-	//double gamma = (priceBump + priceDump - 2 * price) / pow(h, 2);
+	double rho = (priceBumpRho - price) / m_SpaceStep;
+	double gamma = (priceBumpGamma + priceDumpGamma - 2 * price) / pow(m_SpaceStep, 2);
 
 	// todo add result of greeks into the instrument
 	res[GreekKey::Price] = price;
@@ -117,12 +113,9 @@ GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOpt
 	res[GreekKey::Vega] = vega;
 	res[GreekKey::Theta] = theta;
 	res[GreekKey::Rho] = rho;
+	res[GreekKey::Gamma] = gamma;
 
 	return res;
-}
-
-BlackScholes::BlackScholes(double spaceStep) : QuantModels(spaceStep)
-{
 }
 
 double BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
@@ -153,6 +146,7 @@ double BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr,
 	return 0.0;
 }
 
+
 GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr)
 {
 	double S_T{ 0 };
@@ -173,11 +167,14 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	double cdf2 = (1.0 + std::erf(d2 / std::sqrt(2.0))) / 2.0;
 
 	// todo adapt the equations for a put option
-	double delta = cdf1;
-	double rho = K * mat * std::exp(-rfr * mat) * cdf2;
+	double delta = instr->getOptionSign()*cdf1;
+	double rho = instr->getOptionSign()*K * mat * std::exp(-rfr * mat) * cdf2;
 	double vega = S_0 * Maths::pdf_normal_standard(d1) * std::sqrt(mat);
 	double gamma = Maths::pdf_normal_standard(d1) / (S_0 * vol * std::sqrt(mat));
-	double theta = S_0 * vol * Maths::pdf_normal_standard(d1) / (2 * std::sqrt(mat)) + rfr * K * std::exp(-rfr * mat) * cdf2;
+	double theta = S_0 * vol * Maths::pdf_normal_standard(d1) / (2 * std::sqrt(mat)) + instr->getOptionSign() * rfr * K * std::exp(-rfr * mat) * cdf2;
+
+	// todo remove once these equations for the put are implemented
+	//double theta = (m_S0 * m_sigma * pdf(d1)) / (2 * std::sqrt(m_T)) - m_r * m_K * std::exp(-m_r * m_T) * cdf2;
 
 	// todo add result of greeks into the instrument
 	res[GreekKey::Price] = price;
@@ -185,14 +182,10 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	res[GreekKey::Vega] = vega;
 	res[GreekKey::Theta] = theta;
 	res[GreekKey::Rho] = rho;
+	res[GreekKey::Gamma] = gamma;
 
 	return res;
 }
-	// todo remove once these equations for the put are implemented
-	//double delta = -cdf1;
-	//double rho = -m_K * m_T * std::exp(-m_r * m_T) * cdf2;
-	//double vega = m_K * std::exp(-m_r * m_T) * pdf(d2) * std::sqrt(m_T);
-	//double gamma = pdf(d1) / (m_S0 * m_sigma * std::sqrt(m_T));
-	//double theta = (m_S0 * m_sigma * pdf(d1)) / (2 * std::sqrt(m_T)) - m_r * m_K * std::exp(-m_r * m_T) * cdf2;
+
 
 

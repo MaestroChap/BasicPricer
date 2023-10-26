@@ -31,6 +31,6 @@ void display(const GreekContainer& cont)
 {
 	for (auto it = cont.begin(); it != cont.end(); it++)
 	{
-		std::cout << "key : " << GreekKeyToStr(it->first) << " val : " << it->second << std::endl;
+		std::cout << GreekKeyToStr(it->first) << " : " << it->second << std::endl;
 	}
 }
