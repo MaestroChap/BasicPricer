@@ -10,7 +10,7 @@ Instrument::Instrument(const Instrument& instr)
 {
 	m_S0 = instr.m_S0;
 	m_Price = instr.m_Price;
-	m_Greeks = GreekContainer(); // todo deep copy of the greeks
+	m_Greeks = instr.m_Greeks;
 }
 
 
@@ -18,6 +18,9 @@ void Instrument::setGreek(double greekValue, GreekKey key)
 {
 	m_Greeks[key] = greekValue;
 }
+
+//EUROPEAN OPTION
+
 
 EuropeanOption::EuropeanOption(double S0, double strike, double volatility, double maturity, double riskFreeRate) :
 	Instrument(S0), m_strike(strike), m_volatility(volatility), m_maturity(maturity), m_riskFreeRate(riskFreeRate)
@@ -60,4 +63,32 @@ double EuropeanPut::getOptionSign() const
 {
 	// K-S
 	return -1.;
+}
+
+
+// AMERICAN OPTIONS 
+
+AmericanOption::AmericanOption(double S0, double strike, double volatility, double maturity, double riskFreeRate) :
+	Instrument(S0), m_strike(strike), m_volatility(volatility), m_maturity(maturity), m_riskFreeRate(riskFreeRate)
+{
+
+}
+
+AmericanOption::AmericanOption(const AmericanOption& instr) : Instrument(instr)
+{
+	m_maturity = instr.m_maturity;
+	m_riskFreeRate = instr.m_riskFreeRate;
+	m_strike = instr.m_strike;
+	m_volatility = instr.m_volatility;
+}
+
+
+AmericanCall::AmericanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate)
+{
+
+}
+
+AmericanCall::AmericanCall(const AmericanCall& instr) : AmericanOption(instr)
+{
+	
 }

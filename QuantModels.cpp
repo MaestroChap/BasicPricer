@@ -3,38 +3,21 @@
 #include <algorithm>
 #include <numeric>
 
-// Cette partie sert à calculer un intervalle de confiance poour le prix avec alpha= 0.05 et calculer le n optimal pour avoir une longuuer d'intervalle de confiance
-/*
-double somme = std::accumulate(A.begin(), A.end(), 0.) / m_samples.size();
-for (int j = 0; j < m_samples.size(); j++)
-{
-	B[j] = pow(A[j] - somme, 2);
-}
-
-double var = sqrt(std::accumulate(B.begin(), B.end(), 0.) / m_samples.size()-1);
-
-double l = 0.1;
-std::cout << "On a un intervalle de confiance de 95% du prix qui est : " << "[" << somme - (var * 1.96) / sqrt(m_samples.size()) << "," << somme + (var * 1.96) / sqrt(m_samples.size()) << "]" << std::endl;
-std::cout << std::endl;
-std::cout << "Il faut n = " << pow((2 * var * 1.96) / l, 2) << ", pour avoir une erreur d'au plus " << l << std::endl;
-*/
-
 
 MonteCarlo::MonteCarlo(const Unt timeSamples, const double spaceStep) : m_TimeSamples(timeSamples), QuantModels(spaceStep)
 {
-	m_Samples = std::vector<double>();
+	m_Samples = std::vector<double>(m_TimeSamples,0);
 	setSamples();
 }
 
 void MonteCarlo::setSamples()
 {
-	if (m_Samples.empty())
+
+	for (Unt i = 0; i < m_TimeSamples; i++)
 	{
-		for (Unt i = 0; i < m_TimeSamples; i++)
-		{
-			m_Samples.push_back(Maths::draw_sample_normal_standard());
-		}
+		m_Samples[i] = Maths::draw_sample_normal_standard();
 	}
+
 }
 
 BasicMonteCarlo::BasicMonteCarlo(Unt timeSamples, double spaceStep) : MonteCarlo(timeSamples, spaceStep)
@@ -42,13 +25,14 @@ BasicMonteCarlo::BasicMonteCarlo(Unt timeSamples, double spaceStep) : MonteCarlo
 }
 
 double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
-{
+{/*
 	if (instr->hasBeenPriced())
 	{
 		return instr->getPrice();
 	}
-
+	*/
 	std::vector<double> A(m_Samples.size(), 0);
+	std::vector<double> B(m_Samples.size(), 0);
 	double payoff{ 0 };
 	double S_T{ 0 };
 	double S_0{ instr->getS0() };
@@ -57,7 +41,7 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 	double mat{ instr->getMaturity() };
 	double K{ instr->getStrike() };
 
-	for (int i = 0; i < m_Samples.size(); i++)
+	for (Unt i = 0; i < m_Samples.size(); i++)
 	{
 		S_T = S_0 * std::exp((rfr - pow(vol, 2) * 0.5) * mat + vol * std::sqrt(mat) * m_Samples[i]); // Explicit S_T formula
 		payoff = std::max(std::exp(-rfr * mat) * instr->getOptionSign() * (S_T - K), 0.);
@@ -65,10 +49,21 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 	}
 	double price{ std::accumulate(A.begin(), A.end(), 0.) / m_Samples.size() };
 	instr->setPrice(price);
+
+	/*
+	for (int j = 0; j < m_samples.size(); j++)
+	{
+		B[j] = pow(A[j] - somme, 2);
+	}
+
+	double var = sqrt(std::accumulate(B.begin(), B.end(), 0.) / m_Samples.size()-1);
+
+	std::cout << "On a un intervalle de confiance de 95% du prix qui est : " << "[" << price - (var * 1.96) / sqrt(m_samples.size()) << "," << price + (var * 1.96) / sqrt(m_Samples.size()) << "]" << std::endl;
+	*/
 	return price;
 }
 
-double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key)
+double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) // Change function name ? 
 {
 	// this function prices the product after bumping the value corresponding to the key by h
 
@@ -107,13 +102,15 @@ GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOpt
 	double rho = (priceBumpRho - price) / m_SpaceStep;
 	double gamma = (priceBumpGamma + priceDumpGamma - 2 * price) / pow(m_SpaceStep, 2);
 
-	// todo add result of greeks into the instrument
 	res[GreekKey::Price] = price;
 	res[GreekKey::Delta] = delta;
 	res[GreekKey::Vega] = vega;
 	res[GreekKey::Theta] = theta;
 	res[GreekKey::Rho] = rho;
 	res[GreekKey::Gamma] = gamma;
+
+	for (auto& element : res)
+		instr->setGreek(element.second, element.first);
 
 	return res;
 }
@@ -166,17 +163,13 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	double cdf1 = (1.0 + std::erf(d1 / std::sqrt(2.0))) / 2.0;
 	double cdf2 = (1.0 + std::erf(d2 / std::sqrt(2.0))) / 2.0;
 
-	// todo adapt the equations for a put option
+
 	double delta = instr->getOptionSign()*cdf1;
 	double rho = instr->getOptionSign()*K * mat * std::exp(-rfr * mat) * cdf2;
 	double vega = S_0 * Maths::pdf_normal_standard(d1) * std::sqrt(mat);
 	double gamma = Maths::pdf_normal_standard(d1) / (S_0 * vol * std::sqrt(mat));
 	double theta = S_0 * vol * Maths::pdf_normal_standard(d1) / (2 * std::sqrt(mat)) + instr->getOptionSign() * rfr * K * std::exp(-rfr * mat) * cdf2;
 
-	// todo remove once these equations for the put are implemented
-	//double theta = (m_S0 * m_sigma * pdf(d1)) / (2 * std::sqrt(m_T)) - m_r * m_K * std::exp(-m_r * m_T) * cdf2;
-
-	// todo add result of greeks into the instrument
 	res[GreekKey::Price] = price;
 	res[GreekKey::Delta] = delta;
 	res[GreekKey::Vega] = vega;
@@ -184,8 +177,8 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	res[GreekKey::Rho] = rho;
 	res[GreekKey::Gamma] = gamma;
 
+	for (auto& element : res)
+		instr->setGreek(element.second,	element.first);
+
 	return res;
 }
-
-
-

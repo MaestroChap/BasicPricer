@@ -16,24 +16,28 @@ int main()
     std::unique_ptr<QuantModels> modelBS(new BlackScholes(spaceStep));
     std::unique_ptr<EuropeanOption> callOpt(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
     std::unique_ptr<EuropeanOption> putOpt(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate));
-
-    auto callMC = PriceAndGreeks(callOpt, modelMC);
-    auto callBS = PriceAndGreeks(callOpt, modelBS);
-
-    auto putMC = PriceAndGreeks(putOpt, modelMC);
-    auto putBS = PriceAndGreeks(putOpt, modelBS);
-
-    /* Somehow this is not working
+   
     auto callMC = PriceAndGreeks(callOpt, modelMC);
     auto putBS = PriceAndGreeks(putOpt, modelBS);
     auto callBS = PriceAndGreeks(callOpt, modelBS);
     auto putMC = PriceAndGreeks(putOpt, modelMC);
-    */
-    std::cout << "Caracteristiques du call europeen via MC" << std::endl;
-    display(putMC);
+    
+    std::cout << "CALL" << std::endl;
+    std::cout << "Caracteristiques du put europeen via MC" << std::endl;
+    display(callMC);
+
+    std::cout << "----------------" << std::endl;
+    std::cout << "Caracteristiques du put europeen via BS" << std::endl;
+    display(callBS);
 
     std::cout << std::endl;
+    std::cout << "PUT" << std::endl;
+    std::cout << "Caracteristiques du put europeen via MC" << std::endl;
+    display(putMC);
+
+    std::cout << "----------------" << std::endl;
     std::cout << "Caracteristiques du put europeen via BS" << std::endl;
     display(putBS);
+
     return 0;
 }

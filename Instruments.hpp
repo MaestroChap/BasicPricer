@@ -1,6 +1,7 @@
 #pragma once
 
 #include "typedefs.hpp"
+
 class Instrument
 {
 public:
@@ -10,9 +11,9 @@ public:
 	//todo virtual ~Instrument() = 0; // this renders the class Instrument abstract
 
 	double getS0() { return m_S0; }
-	double getPrice() { return m_Price; };
+	double getPrice() { return m_Price; }
 	void setS0(double S0) { m_S0 = S0; m_Price = UNDEFINITE_TOKEN; }
-	void setPrice(double price) { m_Price = price; };
+	void setPrice(double price) { m_Price = price; }
 	bool hasBeenPriced() { return m_Price != UNDEFINITE_TOKEN; }
 
 protected:
@@ -20,6 +21,9 @@ protected:
 	double m_Price;
 	GreekContainer m_Greeks;
 };
+
+
+
 
 class EuropeanOption : public Instrument
 {
@@ -64,6 +68,46 @@ public:
 	virtual EuropeanPut* DeepClone() const override;
 
 	virtual double getOptionSign() const override;
+};
 
+
+
+
+
+class AmericanOption : public Instrument
+{
+public:
+	AmericanOption(double S0, double strike, double volatility, double maturity, double riskFreeRate);
+	AmericanOption(const AmericanOption& instr);
+
+	double getStrike() { return m_strike; }
+	double getVolatility() { return m_volatility; }
+	double getMaturity() { return m_maturity; }
+	double getRiskFreeRate() { return m_riskFreeRate; }
+
+	void setStrike(double strike) { m_strike = strike; m_Price = UNDEFINITE_TOKEN; }
+	void setVolatility(double volatility) { m_volatility = volatility; m_Price = UNDEFINITE_TOKEN; }
+	void setMaturity(double maturity) { m_maturity = maturity; m_Price = UNDEFINITE_TOKEN; }
+	void setRiskFreeRate(double riskFreeRate) { m_riskFreeRate = riskFreeRate; m_Price = UNDEFINITE_TOKEN; }
+
+protected:
+	double m_strike;
+	double m_volatility;
+	double m_maturity;
+	double m_riskFreeRate;
+};
+
+class AmericanCall : public AmericanOption
+{
+public:
+	AmericanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate);
+	AmericanCall(const AmericanCall& instr);
+
+};
+
+class AmericanPut : public AmericanOption
+{
+	AmericanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate);
+	AmericanPut(const AmericanPut& instr);
 
 };
