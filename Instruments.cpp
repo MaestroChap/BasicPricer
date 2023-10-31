@@ -92,3 +92,23 @@ AmericanCall::AmericanCall(const AmericanCall& instr) : AmericanOption(instr)
 {
 	
 }
+
+AmericanPut::AmericanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate)
+{
+
+}
+
+AmericanPut::AmericanPut(const AmericanPut& instr) : AmericanOption(instr)
+{
+
+}
+
+double AmericanCall::getOptionSign() const
+{
+	return 1.;
+}
+
+double AmericanPut::getOptionSign() const
+{
+	return -1.;
+}

@@ -2,6 +2,7 @@
 #include "Maths.hpp"
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 
 MonteCarlo::MonteCarlo(const Unt timeSamples, const double spaceStep) : m_TimeSamples(timeSamples), QuantModels(spaceStep)
@@ -50,6 +51,7 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 	double price{ std::accumulate(A.begin(), A.end(), 0.) / m_Samples.size() };
 	instr->setPrice(price);
 
+	return price;
 	/*
 	for (int j = 0; j < m_samples.size(); j++)
 	{
@@ -60,7 +62,7 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 
 	std::cout << "On a un intervalle de confiance de 95% du prix qui est : " << "[" << price - (var * 1.96) / sqrt(m_samples.size()) << "," << price + (var * 1.96) / sqrt(m_Samples.size()) << "]" << std::endl;
 	*/
-	return price;
+
 }
 
 double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) // Change function name ? 
@@ -181,4 +183,42 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 		instr->setGreek(element.second,	element.first);
 
 	return res;
+}
+
+
+
+double BasicMonteCarlo::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
+{
+	double S_0{ instr->getS0() };
+	double K{ instr->getStrike() };
+	double vol{ instr->getVolatility() };
+	double rfr{ instr->getRiskFreeRate() };
+	double mat{ instr->getMaturity() };
+
+	double u = exp(vol * std::sqrt(mat / m_TimeSamples));
+	double d = exp(-vol * std::sqrt(mat / m_TimeSamples));
+	double p = (exp(rfr * (mat / m_TimeSamples)) - d) / (u - d);
+
+	std::vector<double> U;
+	for (int i = 0; i < m_TimeSamples + 1; i++)
+	{
+		U.push_back(std::max(instr->getOptionSign()*(S_0 * pow(u, m_TimeSamples - i) * pow(d, i)-K), 0.));
+	}
+	for (int i = m_TimeSamples - 1; i > -1; i--)
+	{
+		for (int j = 0; j < i + 1; j++)
+		{
+			U[j] = std::max(std::max(instr->getOptionSign()*(S_0 * pow(u, i - j) * pow(d, j) - K), 0.), exp(-rfr * mat / m_TimeSamples) * (p * U[j] + (1 - p) * U[j + 1]));
+		}
+		U.pop_back();
+	}
+	instr->setPrice(U[0]);
+
+	return U[0];
+}
+
+
+double BasicMonteCarlo::americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key)
+{
+	return 0;
 }

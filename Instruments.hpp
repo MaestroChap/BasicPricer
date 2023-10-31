@@ -7,6 +7,7 @@ class Instrument
 public:
 	Instrument(double S0);
 	Instrument(const Instrument& instr); // deep copy
+
 	virtual void setGreek(double greekValue, GreekKey key);
 	//todo virtual ~Instrument() = 0; // this renders the class Instrument abstract
 
@@ -79,6 +80,8 @@ class AmericanOption : public Instrument
 public:
 	AmericanOption(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	AmericanOption(const AmericanOption& instr);
+	//deep clone() ?
+	virtual double getOptionSign() const = 0;
 
 	double getStrike() { return m_strike; }
 	double getVolatility() { return m_volatility; }
@@ -102,12 +105,13 @@ class AmericanCall : public AmericanOption
 public:
 	AmericanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	AmericanCall(const AmericanCall& instr);
-
+	virtual double getOptionSign() const;
 };
 
 class AmericanPut : public AmericanOption
 {
+public:
 	AmericanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate);
 	AmericanPut(const AmericanPut& instr);
-
+	virtual double getOptionSign() const;
 };

@@ -6,5 +6,6 @@
 
 
 double Price(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
+double Price1(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod);
 GreekContainer PriceAndGreeks(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
 void display(const GreekContainer& cont);
