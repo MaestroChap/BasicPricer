@@ -35,10 +35,10 @@ public:
 
 	virtual double getOptionSign() const = 0;
 
-	double getStrike() { return m_strike; }
-	double getVolatility() { return m_volatility; }
-	double getMaturity() { return m_maturity; }
-	double getRiskFreeRate() { return m_riskFreeRate; }
+	double getStrike() const { return m_strike; }
+	double getVolatility() const { return m_volatility; }
+	double getMaturity() const { return m_maturity; }
+	double getRiskFreeRate() const { return m_riskFreeRate; }
 
 	void setStrike(double strike) { m_strike = strike; m_Price = UNDEFINITE_TOKEN;}
 	void setVolatility(double volatility) { m_volatility = volatility; m_Price = UNDEFINITE_TOKEN;}
@@ -83,10 +83,10 @@ public:
 	//deep clone() ?
 	virtual double getOptionSign() const = 0;
 
-	double getStrike() { return m_strike; }
-	double getVolatility() { return m_volatility; }
-	double getMaturity() { return m_maturity; }
-	double getRiskFreeRate() { return m_riskFreeRate; }
+	double getStrike() const { return m_strike; }
+	double getVolatility() const { return m_volatility; }
+	double getMaturity() const { return m_maturity; }
+	double getRiskFreeRate() const { return m_riskFreeRate; }
 
 	void setStrike(double strike) { m_strike = strike; m_Price = UNDEFINITE_TOKEN; }
 	void setVolatility(double volatility) { m_volatility = volatility; m_Price = UNDEFINITE_TOKEN; }

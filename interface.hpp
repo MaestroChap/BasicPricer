@@ -5,7 +5,7 @@
 #include "Instruments.hpp"
 
 
-double Price(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
-double Price1(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod);
-GreekContainer PriceAndGreeks(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
+double PriceEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
+double PriceAmerican(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod);
+GreekContainer PriceAndGreeksEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
 void display(const GreekContainer& cont);
