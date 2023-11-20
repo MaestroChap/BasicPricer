@@ -17,12 +17,18 @@ std::string GreekKeyToStr(GreekKey key)
 	else
 		return "Unknown key in greek container";
 }
-double PriceEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod) // Adapt to americanOption
+
+double PriceEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod)
 {
-	return mod->europeanOptionPrice(instr);
+	return mod->europeanOptionPrice(instr).price;
 }
 
-double PriceAmerican(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod) // Adapt to americanOption
+std::pair<double,double> ConfidenceIntervalEuropeanOption(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod)
+{
+	return mod->europeanOptionPrice(instr).intervalValues;
+}
+
+double PriceAmerican(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod) 
 {
 	return mod->americanOptionPrice(instr);
 }

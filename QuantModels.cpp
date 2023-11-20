@@ -3,10 +3,13 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <utility>
 
-//BLACK SCHOLES ------------------------------------------------------------
+//Black Scholes Model
+std::pair<double, double> intervalValues{ 0., 0. };
 
-double BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
+
+struct PricingAnalytics BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
 {
 	double S_T{ 0 };
 	double S_0{ instr->getS0() };
@@ -25,7 +28,12 @@ double BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
 
 	double price = instr->getOptionSign() * (S_0 * cdf1 - K * std::exp(-rfr * mat) * cdf2);
 	instr->setPrice(price);
-	return price;
+
+	std::pair<double, double> intervalValues{ 0., 0. };
+
+	struct PricingAnalytics ConfidenceInterval { price, intervalValues, 0.95 };
+
+	return ConfidenceInterval;
 }
 
 double BlackScholes::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key)
@@ -43,7 +51,7 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	double rfr{ instr->getRiskFreeRate() };
 	double mat{ instr->getMaturity() };
 	double K{ instr->getStrike() };
-	double price{ this->europeanOptionPrice(instr) };
+	double price{ this->europeanOptionPrice(instr).price };
 
 	GreekContainer res;
 	double d1 = 1 / (vol * std::sqrt(mat)) * (std::log(S_0 / K) + (rfr + std::pow(vol, 2) * 0.5) * mat);
@@ -74,9 +82,31 @@ GreekContainer BlackScholes::europeanOptionGreeks(std::unique_ptr<EuropeanOption
 	return res;
 }
 
+double BlackScholes::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
+{
+	instr->setPrice(UNDEFINITE_TOKEN);
+	return instr->getPrice();
+}
 
-//MONTE CARLO ----------------------------------------------------
+double BlackScholes::americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key)
+{
+	instr->setGreek(UNDEFINITE_TOKEN,key);
+	instr->setPrice(UNDEFINITE_TOKEN);
+	return instr->getPrice();
+}
 
+GreekContainer BlackScholes::americanOptionGreeks(std::unique_ptr<AmericanOption>& instr)
+{
+	instr->setGreek(UNDEFINITE_TOKEN, GreekKey::Delta);
+	instr->setGreek(UNDEFINITE_TOKEN, GreekKey::Vega);
+	instr->setGreek(UNDEFINITE_TOKEN, GreekKey::Theta);
+	instr->setGreek(UNDEFINITE_TOKEN, GreekKey::Rho);
+	instr->setGreek(UNDEFINITE_TOKEN, GreekKey::Gamma);
+
+	return instr->getGreek();
+}
+
+//Monte Carlo
 
 MonteCarlo::MonteCarlo(const Unt timeSamples, const double spaceStep) : m_TimeSamples(timeSamples), QuantModels(spaceStep)
 {
@@ -86,27 +116,22 @@ MonteCarlo::MonteCarlo(const Unt timeSamples, const double spaceStep) : m_TimeSa
 
 void MonteCarlo::setSamples()
 {
-
 	for (Unt i = 0; i < m_TimeSamples; i++)
 	{
 		m_Samples[i] = Maths::draw_sample_normal_standard();
 	}
-
 }
 
 BasicMonteCarlo::BasicMonteCarlo(Unt timeSamples, double spaceStep) : MonteCarlo(timeSamples, spaceStep)
 {
 }
 
-double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
-{/*
-	if (instr->hasBeenPriced())
-	{
-		return instr->getPrice();
-	}
-	*/
+struct PricingAnalytics BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
+{
 	std::vector<double> A(m_Samples.size(), 0);
 	std::vector<double> B(m_Samples.size(), 0);
+	std::pair<double, double> intervalValues{ 0., 0. };
+
 	double payoff{ 0 };
 	double S_T{ 0 };
 	double S_0{ instr->getS0() };
@@ -124,18 +149,19 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 	double price{ std::accumulate(A.begin(), A.end(), 0.) / m_Samples.size() };
 	instr->setPrice(price);
 
-	return price;
-	/*
-	for (int j = 0; j < m_samples.size(); j++)
+	for (Unt i = 0; i < m_Samples.size(); i++)
 	{
-		B[j] = pow(A[j] - somme, 2);
+		B[i] = pow(A[i] - price, 2);
 	}
 
-	double var = sqrt(std::accumulate(B.begin(), B.end(), 0.) / m_Samples.size()-1);
+	double std = sqrt(std::accumulate(B.begin(), B.end(), 0.) / m_Samples.size() - 1);
 
-	std::cout << "On a un intervalle de confiance de 95% du prix qui est : " << "[" << price - (var * 1.96) / sqrt(m_samples.size()) << "," << price + (var * 1.96) / sqrt(m_Samples.size()) << "]" << std::endl;
-	*/
+	intervalValues.first = price - (std * Maths::inverseNormalCDF((1 - (1 - 0.95) / 2.)))/ sqrt(m_Samples.size());
+	intervalValues.second = price + (std * Maths::inverseNormalCDF((1 - (1 - 0.95) / 2.))) / sqrt(m_Samples.size());
 
+	struct PricingAnalytics ConfidenceInterval { price, intervalValues, 0.95 };
+
+	return ConfidenceInterval;
 }
 
 double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) // Change function name ? 
@@ -153,14 +179,14 @@ double BasicMonteCarlo::europeanOptionPrice(std::unique_ptr<EuropeanOption>& ins
 		bumpedInstr->setMaturity(bumpedInstr->getMaturity() + m_SpaceStep);
 	else if (key == GreekKey::Gamma)
 		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
-	return europeanOptionPrice(bumpedInstr);
+	return europeanOptionPrice(bumpedInstr).price;
 }
 
 GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr)
 {
 	// todo add a check on the greeks like in pricing mode, and change the setter to reinitialize the greeks each time a parameter is modified
 	GreekContainer res;
-	double price = europeanOptionPrice(instr);
+	double price = europeanOptionPrice(instr).price;
 	double priceBumpDelta = europeanOptionPrice(instr, GreekKey::Delta);
 	double priceBumpVega = europeanOptionPrice(instr, GreekKey::Vega);
 	double priceBumpTheta = europeanOptionPrice(instr, GreekKey::Theta);
@@ -186,54 +212,24 @@ GreekContainer BasicMonteCarlo::europeanOptionGreeks(std::unique_ptr<EuropeanOpt
 
 	for (auto& element : res)
 		instr->setGreek(element.second, element.first);
-
 	return res;
 }
 
-
 double BasicMonteCarlo::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
 {
-	double S_0{ instr->getS0() };
-	double K{ instr->getStrike() };
-	double vol{ instr->getVolatility() };
-	double rfr{ instr->getRiskFreeRate() };
-	double mat{ instr->getMaturity() };
-
-	double u = exp(vol * std::sqrt(mat / m_TimeSamples));
-	double d = exp(-vol * std::sqrt(mat / m_TimeSamples));
-	double p = (exp(rfr * (mat / m_TimeSamples)) - d) / (u - d);
-
-	std::vector<double> U;
-	for (int i = 0; i < m_TimeSamples + 1; i++)
-	{
-		U.push_back(std::max(instr->getOptionSign()*(S_0 * pow(u, m_TimeSamples - i) * pow(d, i)-K), 0.));
-	}
-	for (int i = m_TimeSamples - 1; i > -1; i--)
-	{
-		for (int j = 0; j < i + 1; j++)
-		{
-			U[j] = std::max(std::max(instr->getOptionSign()*(S_0 * pow(u, i - j) * pow(d, j) - K), 0.), exp(-rfr * mat / m_TimeSamples) * (p * U[j] + (1 - p) * U[j + 1]));
-		}
-		U.pop_back();
-	}
-	instr->setPrice(U[0]);
-
-	return U[0];
+	return 0.;
 }
-
 
 double BasicMonteCarlo::americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key)
 {
 	return 0;
 }
 
+//Cox Ross Rubinstein model ----------------------
 
-
-//TREE ----------------------
-
-
-double Tree::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
+struct PricingAnalytics CRR::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
 {
+	std::pair<double, double> intervalValues{ 0., 0. };
 	double S_0{ instr->getS0() };
 	double K{ instr->getStrike() };
 	double vol{ instr->getVolatility() };
@@ -259,22 +255,37 @@ double Tree::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr)
 	}
 	instr->setPrice(U[0]);
 
-	return U[0];
+	struct PricingAnalytics ConfidenceInterval { U[0], intervalValues, 0.95 };
+
+	return ConfidenceInterval;
 }
 
-double Tree::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key)
+double CRR::europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key)
 {
-	return 0.;
+	std::unique_ptr<EuropeanOption> bumpedInstr(instr->DeepClone());
+	if (key == GreekKey::Delta)
+		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
+	else if (key == GreekKey::Vega)
+		bumpedInstr->setVolatility(bumpedInstr->getVolatility() + m_SpaceStep);
+	else if (key == GreekKey::Rho)
+		bumpedInstr->setRiskFreeRate(bumpedInstr->getRiskFreeRate() + m_SpaceStep);
+	else if (key == GreekKey::Theta)
+		bumpedInstr->setMaturity(bumpedInstr->getMaturity() + m_SpaceStep);
+	else if (key == GreekKey::Gamma)
+		bumpedInstr->setS0(bumpedInstr->getS0() + m_SpaceStep);
+	return europeanOptionPrice(bumpedInstr).price;
 }
 
-GreekContainer Tree::europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr)
+GreekContainer CRR::europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr)
 {
 	GreekContainer a;
 	return a;
 }
 
-double Tree::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
+double CRR::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
 {
+	std::pair<double, double> intervalValues{ 0., 0. };
+
 	double S_0{ instr->getS0() };
 	double K{ instr->getStrike() };
 	double vol{ instr->getVolatility() };
@@ -300,10 +311,12 @@ double Tree::americanOptionPrice(std::unique_ptr<AmericanOption>& instr)
 	}
 	instr->setPrice(U[0]);
 
-	return U[0];
+	struct PricingAnalytics ConfidenceInterval { U[0], intervalValues, 0.95 };
+
+	return ConfidenceInterval.price;
 }
 
-double Tree::americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key)
+double CRR::americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key)
 {
 	return 0;
 }
