@@ -6,7 +6,6 @@
 #include <utility>
 
 
-
 PricingAnalytics BlackScholes::setPricingAnalytics(std::unique_ptr<Option>& option)
 {
 	PricingAnalytics p;
@@ -43,9 +42,9 @@ PricingAnalytics BlackScholes::setPricingAnalytics(std::unique_ptr<Option>& opti
 		double theta = S_0 * vol * Maths::pdf_normal_standard(d1) / (2 * std::sqrt(mat)) + option->getOptionSign() * rfr * K * std::exp(-rfr * mat) * cdf2;
 
 		res["Delta"] = delta;
+		res["Rho"] = rho;
 		res["Vega"] = vega;
 		res["Theta"] = theta;
-		res["Rho"] = rho;
 		res["Gamma"] = gamma;
 
 		for (auto& element : res)
@@ -204,12 +203,14 @@ PricingAnalytics BasicMonteCarlo::setPricingAnalytics(std::unique_ptr<Option>& o
 
 //Cox Ross Rubinstein model ----------------------
 
-double CRR::pricing(std::unique_ptr<Option>& option)
+std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 {
-	PricingAnalytics stats;
+	std::pair<double, GreekContainer> pair_gen;
+	GreekContainer greeks;
 	EuropeanOption* euroOption = dynamic_cast<EuropeanOption*>(option.get());
 	if (euroOption)
 	{
+
 		double S_0{ option->getS0() };
 		double K{ option->getStrike() };
 		double vol{ option->getVolatility() };
@@ -220,6 +221,15 @@ double CRR::pricing(std::unique_ptr<Option>& option)
 		double d = exp(-vol * std::sqrt(mat / m_step));
 		double p = (exp(rfr * (mat / m_step)) - d) / (u - d);
 
+		double price = 0;
+		double delta = 0;
+		double gamma = 0;
+		double f11 = 0;
+		double f10 = 0;
+		double f22 = 0;
+		double f21 = 0;
+		double f20 = 0;
+
 		std::vector<double> U;
 		for (int i = 0; i < m_step + 1; i++)
 		{
@@ -227,17 +237,42 @@ double CRR::pricing(std::unique_ptr<Option>& option)
 		}
 		for (int i = m_step - 1; i > -1; i--)
 		{
+			if (i == 0)
+			{
+				f11 = U[0];
+				f10 = U[1];
+			}
+			if (i == 1)
+			{
+				f22 = U[0];
+				f21 = U[1];
+				f20 = U[2];
+			}
 			for (int j = 0; j < i + 1; j++)
 			{
 				U[j] = option->getOptionSign() * exp(-rfr * mat / m_step) * (p * U[j] + (1 - p) * U[j + 1]);
 			}
 			U.pop_back();
 		}
-		option->setPrice(U[0]);
-		return U[0];
+		price = U[0];
+		delta = (f11 - f10) / (S_0 * u - S_0 * d);
+		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
+
+		option->setPrice(price);
+
+		pair_gen.first = price;
+
+		greeks["Delta"] = delta;
+		greeks["Gamma"] = gamma;
+		//dic["Theta"] = theta;
+		pair_gen.second = greeks;
+
+		return pair_gen;
 	}
 	else
 	{
+		std::pair<double, GreekContainer> pair_gen;
+		GreekContainer greeks;
 		double S_0{ option->getS0() };
 		double K{ option->getStrike() };
 		double vol{ option->getVolatility() };
@@ -248,25 +283,59 @@ double CRR::pricing(std::unique_ptr<Option>& option)
 		double d = exp(-vol * std::sqrt(mat / m_step));
 		double p = (exp(rfr * (mat / m_step)) - d) / (u - d);
 
+		//Grecques
+
+		double price = 0;
+		double delta = 0;
+		double gamma = 0;
+		double f11 = 0;
+		double f10 = 0;
+		double f22 = 0;
+		double f21 = 0;
+		double f20 = 0;
+
 		std::vector<double> U;
 		for (int i = 0; i < m_step + 1; i++)
 		{
 			U.push_back(std::max(option->getOptionSign() * (S_0 * pow(u, m_step - i) * pow(d, i) - K), 0.));
 		}
+		
 		for (int i = m_step - 1; i > -1; i--)
 		{
+			if (i == 0)
+			{
+				f11 = U[0];
+				f10 = U[1];
+			}
+			if (i == 1)
+			{
+				f22 = U[0];
+				f21 = U[1];
+				f20 = U[2];
+			}
 			for (int j = 0; j < i + 1; j++)
 			{
 				U[j] = std::max(std::max(option->getOptionSign() * (S_0 * pow(u, i - j) * pow(d, j) - K), 0.), exp(-rfr * mat / m_step) * (p * U[j] + (1 - p) * U[j + 1]));
 			}
 			U.pop_back();
 		}
-		option->setPrice(U[0]);
-		return U[0];
+		price = U[0];
+		delta = (f11 - f10) / (S_0 * u - S_0 * d);
+		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
+
+		option->setPrice(price);
+
+		pair_gen.first = price;
+
+		greeks["Delta"] = delta;
+		greeks["Gamma"] = gamma;
+		//dic["Theta"] = theta;
+		pair_gen.second = greeks;
+		return pair_gen;
 	}
 }
 
-GreekContainer CRR::greeks(std::unique_ptr<Option>& option)
+GreekContainer CRR::greeks(std::unique_ptr<Option>& option) //To do
 {
 	GreekContainer a;
 	return a;
@@ -275,9 +344,14 @@ GreekContainer CRR::greeks(std::unique_ptr<Option>& option)
 PricingAnalytics CRR::setPricingAnalytics(std::unique_ptr<Option>& option)
 {
 	PricingAnalytics pricingAnalytics;
-
-	pricingAnalytics.price = pricing(option);
-	pricingAnalytics.greeks = greeks(option);
+	std::pair<double, GreekContainer> res;
+	res = pricing(option);
+	pricingAnalytics.price = res.first;
+	for (auto& element : greeks(option))
+	{
+		res.second[element.first] = element.second;
+	}
+	pricingAnalytics.greeks = res.second;
 
 	return pricingAnalytics;
 }

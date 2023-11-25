@@ -4,40 +4,40 @@
 
 int main()
 {
-    int step = 500;
+    int step = 5;
     int nbMonteCarloSteps = 100000;
     double spaceStep = 0.001;
 
     double S0 = 50;
-    double strike = 52;
-    double volatility = 0.30;
-    double riskFreeRate = 0.05;
-    double maturity = 0.5;
-
+    double strike = 50;
+    double volatility = 0.40;
+    double riskFreeRate = 0.1;
+    double maturity = 0.4167;
 
     std::unique_ptr<QuantModels> monteCarlo_model(new BasicMonteCarlo(nbMonteCarloSteps, spaceStep)); // Monte Carlo
-
+    std::unique_ptr<QuantModels> blackScholes_model(new BlackScholes(spaceStep)); // Black Scholes
     std::unique_ptr<QuantModels> crr_model(new CRR(step, spaceStep)); // Binomial Tree
 
-    std::unique_ptr<QuantModels> blackScholes_model(new BlackScholes(spaceStep)); // Black Scholes
+    std::unique_ptr<Option> EuropeanCall1(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate)); // European Call
+    std::unique_ptr<Option> EuropeanCall2(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
+    std::unique_ptr<Option> EuropeanCall3(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
 
-    std::unique_ptr<Option> EuropeanCall1(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
-    std::unique_ptr<Option> EuropeanPut1(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate));
+    std::unique_ptr<Option> EuropeanPut1(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate)); // European Put
 
-    std::unique_ptr<Option> AmericanCall1(new AmericanCall(S0, strike, volatility, maturity, riskFreeRate));
-    std::unique_ptr<Option> AmericanPut1(new AmericanPut(S0, strike, volatility, maturity, riskFreeRate));
+    std::unique_ptr<Option> AmericanCall1(new AmericanCall(S0, strike, volatility, maturity, riskFreeRate)); // American call
+    std::unique_ptr<Option> AmericanPut1(new AmericanPut(S0, strike, volatility, maturity, riskFreeRate)); // American Put
 
-    PricingAnalytics statsBSCall = stats(EuropeanCall1, blackScholes_model);
-    PricingAnalytics statsBSPut = stats(EuropeanPut1, blackScholes_model);
-
-    PricingAnalytics statsMCCall = stats(EuropeanCall1, monteCarlo_model);
-    PricingAnalytics statsMCPut = stats(EuropeanPut1, monteCarlo_model);
-
-    PricingAnalytics statsCRRCall = stats(EuropeanCall1, crr_model);
+    PricingAnalytics statsCRRCall = stats(EuropeanCall1, crr_model); // Pricing CRR
     PricingAnalytics statsCRRPut = stats(EuropeanPut1, crr_model);
 
+    PricingAnalytics statsBSCall = stats(EuropeanCall1, blackScholes_model); // Pricing Black Scholes
+    PricingAnalytics statsBSPut = stats(EuropeanPut1, blackScholes_model);
 
-    std::cout << "Caracteristiques du put europeen : " << std::endl;
+    PricingAnalytics statsMCCall = stats(EuropeanCall1, monteCarlo_model); // Pricing Monte Carlo
+    PricingAnalytics statsMCPut = stats(EuropeanPut1, monteCarlo_model);
+
+
+    std::cout << "Caracteristiques du Call europeen : " << std::endl;
     std::cout << std::endl;
     std::cout << "S0: " << S0 << std::endl;
     std::cout << "Strike : " << strike << std::endl;
@@ -73,5 +73,9 @@ int main()
 
     std::cout << "Prix : " << statsCRRCall.price <<std::endl;
 
+    for (auto& element : statsCRRCall.greeks)
+    {
+        std::cout << element.first << " : " << element.second << std::endl;
+    }
     return 0;
 }

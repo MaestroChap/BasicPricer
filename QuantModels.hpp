@@ -39,7 +39,6 @@ public:
 	virtual std::pair<double, std::pair<double, double>> pricing(std::unique_ptr<Option>& option);
 	virtual double pricingForGreeks(std::unique_ptr<Option>& option, std::string key);
 	virtual GreekContainer greeks(std::unique_ptr<Option>& option);
-
 };
 
 class CRR : public QuantModels
@@ -47,7 +46,7 @@ class CRR : public QuantModels
 public:
 	CRR(Unt step, double spaceStep) : QuantModels(spaceStep), m_step(step) {};
 	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option) override;
-	virtual double pricing(std::unique_ptr<Option>& option);
+	virtual std::pair<double, GreekContainer> pricing(std::unique_ptr<Option>& option);
 	virtual GreekContainer greeks(std::unique_ptr<Option>& option);
 
 protected:
