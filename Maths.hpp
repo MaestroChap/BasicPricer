@@ -9,4 +9,3 @@ namespace Maths
 	double draw_sample_normal_standard();
 	double inverseNormalCDF(double probability);
 }
-

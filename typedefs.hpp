@@ -8,14 +8,14 @@
 
 typedef unsigned int Unt;
 
-enum class GreekKey
+typedef std::unordered_map<std::string, double> GreekContainer;
+
+struct PricingAnalytics
 {
-	Price = 0,
-	Delta,
-	Vega,
-	Rho,
-	Gamma,
-	Theta
+	double price;
+	GreekContainer greeks;
+	//std::pair<double, double> intervalValues;
+	//double intervalPrecision; // 95% in general;
 };
 
-typedef std::unordered_map<GreekKey, double> GreekContainer;
+using PricingAnalytics = struct PricingAnalytics;
