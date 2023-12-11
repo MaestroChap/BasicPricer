@@ -5,7 +5,6 @@
 #include <cmath>
 #include <utility>
 
-
 PricingAnalytics BlackScholes::setPricingAnalytics(std::unique_ptr<Option>& option)
 {
 	PricingAnalytics p;
@@ -163,7 +162,7 @@ GreekContainer BasicMonteCarlo::greeks(std::unique_ptr<Option>& option)
 	GreekContainer res;
 	std::unique_ptr<Option> bumpedInstr(option->DeepClone());
 
-	double price = pricing(option).first;
+	double price = pricing(option).first; //Verifier si pas de problème parce qu'on rappelle pricing sur option à la place de le faire sur le deepclone
 	double priceBumpDelta = pricingForGreeks(option, "Delta");
 	double priceBumpVega = pricingForGreeks(option, "Vega");
 	double priceBumpTheta = pricingForGreeks(option, "Theta");
@@ -210,7 +209,6 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 	EuropeanOption* euroOption = dynamic_cast<EuropeanOption*>(option.get());
 	if (euroOption)
 	{
-
 		double S_0{ option->getS0() };
 		double K{ option->getStrike() };
 		double vol{ option->getVolatility() };
@@ -224,6 +222,7 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 		double price = 0;
 		double delta = 0;
 		double gamma = 0;
+		double theta = 0;
 		double f11 = 0;
 		double f10 = 0;
 		double f22 = 0;
@@ -257,14 +256,14 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 		price = U[0];
 		delta = (f11 - f10) / (S_0 * u - S_0 * d);
 		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
-
+		theta = (f21 - price) / (2 * mat / m_step);
 		option->setPrice(price);
 
 		pair_gen.first = price;
 
 		greeks["Delta"] = delta;
 		greeks["Gamma"] = gamma;
-		//dic["Theta"] = theta;
+		greeks["Theta"] = theta;
 		pair_gen.second = greeks;
 
 		return pair_gen;
@@ -288,6 +287,7 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 		double price = 0;
 		double delta = 0;
 		double gamma = 0;
+		double theta = 0;
 		double f11 = 0;
 		double f10 = 0;
 		double f22 = 0;
@@ -322,23 +322,38 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 		price = U[0];
 		delta = (f11 - f10) / (S_0 * u - S_0 * d);
 		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
-
+		theta = (f21 - price) / (2 * mat / m_step);
 		option->setPrice(price);
 
 		pair_gen.first = price;
 
 		greeks["Delta"] = delta;
 		greeks["Gamma"] = gamma;
-		//dic["Theta"] = theta;
+		greeks["Theta"] = theta; // Problème avec le theta 70%
 		pair_gen.second = greeks;
 		return pair_gen;
 	}
 }
 
-GreekContainer CRR::greeks(std::unique_ptr<Option>& option) //To do
+GreekContainer CRR::greeks(std::unique_ptr<Option>& option)
 {
-	GreekContainer a;
-	return a;
+	GreekContainer g;
+	std::unique_ptr<Option> bumpedInstrVega(option->DeepClone());
+	std::unique_ptr<Option> bumpedInstrRho(option->DeepClone());
+	double price = pricing(option).first;
+
+	bumpedInstrVega->setVolatility(bumpedInstrVega->getVolatility() + m_SpaceStep);
+	bumpedInstrRho->setRiskFreeRate(bumpedInstrRho->getRiskFreeRate() + m_SpaceStep);
+
+	double priceBumpVega = pricing(bumpedInstrVega).first;
+	double priceBumpRho = pricing(bumpedInstrRho).first;
+
+	double vega = (priceBumpVega - price)/m_SpaceStep; // Problème avec le vega 100%
+	double rho = (priceBumpRho - price) / m_SpaceStep; // Problème avec le rho 100%
+
+	g["Vega"] = vega;
+	g["Rho"] = rho;
+	return g;
 }
 
 PricingAnalytics CRR::setPricingAnalytics(std::unique_ptr<Option>& option)
@@ -347,6 +362,7 @@ PricingAnalytics CRR::setPricingAnalytics(std::unique_ptr<Option>& option)
 	std::pair<double, GreekContainer> res;
 	res = pricing(option);
 	pricingAnalytics.price = res.first;
+
 	for (auto& element : greeks(option))
 	{
 		res.second[element.first] = element.second;

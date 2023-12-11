@@ -19,3 +19,12 @@ struct PricingAnalytics
 };
 
 using PricingAnalytics = struct PricingAnalytics;
+
+struct OptionParameters
+{
+	double S0;
+	double strike;
+	double volatility;
+	double maturity;
+	double riskFreeRate;
+};
