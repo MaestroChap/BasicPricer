@@ -7,17 +7,9 @@
 
 class QuantModels
 {
-//friend class EuropeanOption;
 public:
-	QuantModels( double spaceStep) : m_SpaceStep(spaceStep) {};
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr) = 0;
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) = 0;
-	virtual GreekContainer europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) = 0;
-
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr) = 0;
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key) = 0;
-	virtual GreekContainer americanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) = 0;
-
+	QuantModels(double spaceStep) : m_SpaceStep(spaceStep) {};
+	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option) = 0;
 protected:
 	double m_SpaceStep; // for greeks computation
 };
@@ -25,15 +17,8 @@ protected:
 class BlackScholes : public QuantModels
 {
 public:
-	BlackScholes(double spaceStep) : QuantModels(spaceStep) {} ;
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr) override;
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) override;
-	virtual GreekContainer europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override;
-
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr) override { return 0; } // Todo
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key) override { return 0; } // Todo
-	virtual GreekContainer americanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override { GreekContainer a; return a; }
-
+	BlackScholes(double spaceStep) : QuantModels(spaceStep) {};
+	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option) override;
 };
 
 class MonteCarlo : public QuantModels
@@ -50,26 +35,20 @@ class BasicMonteCarlo : public MonteCarlo
 {
 public:
 	BasicMonteCarlo(Unt timeSamples, double spaceStep);
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr) override;
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) override;
-	virtual GreekContainer europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override;
-
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr) override;
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key) override;
-	virtual GreekContainer americanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override { GreekContainer a; return a; }
+	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option);
+	virtual std::pair<double, std::pair<double, double>> pricing(std::unique_ptr<Option>& option);
+	virtual double pricingForGreeks(std::unique_ptr<Option>& option, std::string key);
+	virtual GreekContainer greeks(std::unique_ptr<Option>& option);
 };
 
-class Tree : public QuantModels
+class CRR : public QuantModels
 {
 public:
-	Tree(Unt step, double spaceStep) : QuantModels(spaceStep), m_step(step) {};
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr) override;
-	virtual double europeanOptionPrice(std::unique_ptr<EuropeanOption>& instr, GreekKey key) override;
-	virtual GreekContainer europeanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override;
+	CRR(Unt step, double spaceStep) : QuantModels(spaceStep), m_step(step) {};
+	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option) override;
+	virtual std::pair<double, GreekContainer> pricing(std::unique_ptr<Option>& option);
+	virtual GreekContainer greeks(std::unique_ptr<Option>& option);
 
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr) override;
-	virtual double americanOptionPrice(std::unique_ptr<AmericanOption>& instr, GreekKey key) override;
-	virtual GreekContainer americanOptionGreeks(std::unique_ptr<EuropeanOption>& instr) override { GreekContainer a; return a; }
 protected:
 	Unt m_step;
 };

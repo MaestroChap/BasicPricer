@@ -1,49 +1,64 @@
+#include "BrownianMotion1D.hpp"
 #include <iostream>
 #include "interface.hpp"
+#include "Maths.hpp"
+#include "Stock.hpp"
+
 
 int main()
 {
-    int step = 500; //1000 is enough
+    int step = 500;
     int nbMonteCarloSteps = 100000;
-    double spaceStep = 0.001;
+    double spaceStep = 0.0001;
 
     double S0 = 50;
-    double strike = 52;
-    double volatility = 0.30;
-    double riskFreeRate = 0.05;
-    double maturity = 0.5;
+    double strike = 50;
+    double volatility = 0.4;
+    double riskFreeRate = 0.1;
+    double maturity = 0.4167;
 
-    std::unique_ptr<QuantModels> modelMC(new BasicMonteCarlo(nbMonteCarloSteps, spaceStep)); // Monte Carlo
+    std::unique_ptr<QuantModels> monteCarlo_model(new BasicMonteCarlo(nbMonteCarloSteps, spaceStep)); // Monte Carlo
+    std::unique_ptr<QuantModels> blackScholes_model(new BlackScholes(spaceStep)); // Black Scholes
+    std::unique_ptr<QuantModels> crr_model(new CRR(step, spaceStep)); // Binomial Tree
 
-    std::unique_ptr<QuantModels> modelTree(new Tree(step, spaceStep)); // Tree
+    std::unique_ptr<Option> EuropeanCall1(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate)); // European Call
+    std::unique_ptr<Option> EuropeanCall2(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
+    std::unique_ptr<Option> EuropeanCall3(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
 
-    std::unique_ptr<QuantModels> modelBS(new BlackScholes(spaceStep)); // Black Scholes
+    std::unique_ptr<Option> EuropeanPut1(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate)); // European Put
 
-    std::unique_ptr<EuropeanOption> callOpt(new EuropeanCall(S0, strike, volatility, maturity, riskFreeRate));
-    std::unique_ptr<EuropeanOption> putOpt(new EuropeanPut(S0, strike, volatility, maturity, riskFreeRate));
+    std::unique_ptr<Option> AmericanCall1(new AmericanCall(S0, strike, volatility, maturity, riskFreeRate)); // American call
+    std::unique_ptr<Option> AmericanPut1(new AmericanPut(S0, strike, volatility, maturity, riskFreeRate)); // American Put
 
-    std::unique_ptr<AmericanOption> callOpt1(new AmericanCall(S0, strike, volatility, maturity, riskFreeRate));
-    std::unique_ptr<AmericanOption> putOpt1(new AmericanPut(S0, strike, volatility, maturity, riskFreeRate));
+    PricingAnalytics statsCRRCall = PriceAndGreeks(AmericanCall1, crr_model); // Pricing CRR
+    PricingAnalytics statsCRRPut = PriceAndGreeks(AmericanPut1, crr_model);
 
-    
-    double priceMC = PriceEuropean(callOpt, modelMC);
-    double priceBS = PriceEuropean(callOpt, modelBS);
-    double priceTree = PriceEuropean(callOpt, modelTree);
+    PricingAnalytics statsBSCall = PriceAndGreeks(AmericanCall1, blackScholes_model); // Pricing Black Scholes
+    PricingAnalytics statsBSPut = PriceAndGreeks(AmericanPut1, blackScholes_model);
 
-    std::cout << "Caracteristiques du call europeen : " << std::endl;
-    std::cout << std::endl;
-    std::cout << "S0: " << S0 << std::endl;
-    std::cout << "Strike : " << strike << std::endl;
-    std::cout << "Volatilite : " << volatility << std::endl;
-    std::cout << "RiskFreeRate : " << riskFreeRate << std::endl;
-    std::cout << "Maturity : " << maturity << std::endl;
-    std::cout << std::endl;
+    PricingAnalytics statsMCCall = PriceAndGreeks(AmericanCall1, monteCarlo_model); // Pricing Monte Carlo
+    PricingAnalytics statsMCPut = PriceAndGreeks(AmericanPut1, monteCarlo_model);
+
+    PrintOptionParameters(AmericanPut1);
+
     std::cout << "--------------" << std::endl;
-    std::cout << "Price : "<< std::endl;
-    std::cout << std::endl;
-    std::cout << "Black Scholes model : " << priceBS << std::endl;
-    std::cout << "Monte Carlo model : " << priceMC << " | " << nbMonteCarloSteps << " steps" << std::endl;
-    std::cout << "Tree model : " << priceTree << " | " << step << " steps" << std::endl;
+
+    std::cout << "BLACK SCHOLES " << std::endl;
     
+    Print(statsBSPut);
+
+    std::cout << "-----------" << std::endl;
+
+    std::cout << "MONTE CARLO " << std::endl;
+
+    Print(statsMCPut);
+
+    std::cout << "-----------" << std::endl;
+
+    std::cout << " CRR Model " << std::endl;
+
+    Print(statsCRRPut);
+
+
     return 0;
 }

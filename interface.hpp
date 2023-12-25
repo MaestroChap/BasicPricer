@@ -4,8 +4,7 @@
 #include "typedefs.hpp"
 #include "Instruments.hpp"
 
-
-double PriceEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
-double PriceAmerican(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod);
-GreekContainer PriceAndGreeksEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod);
-void display(const GreekContainer& cont);
+PricingAnalytics PriceAndGreeks(std::unique_ptr<Option>& option, const std::unique_ptr<QuantModels>& mod);
+void Print(PricingAnalytics& pricingAnalytics);
+void PrintOptionParameters(std::unique_ptr<Option>& option);
+std::string GetOptionTypeName(const std::unique_ptr<Option>& option);

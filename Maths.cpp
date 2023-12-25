@@ -3,6 +3,7 @@
 #include <random>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 namespace Maths
 {
@@ -27,5 +28,21 @@ namespace Maths
 		double a = distribution(gen);
 
 		return a;
+	}
+
+	double erf_inv(double x) 
+	{
+		double tt1, tt2, lnx, sgn;
+		sgn = (x < 0) ? -1.0f : 1.0f;
+		x = (1 - x) * (1 + x);
+		lnx = logf(x);
+		tt1 = 2 / (M_PI * 0.147) + 0.5f * lnx;
+		tt2 = 1 / (0.147) * lnx;
+		return(sgn * sqrtf(-tt1 + sqrtf(tt1 * tt1 - tt2)));
+	}
+
+	double inverseNormalCDF(double probability)
+	{
+		return sqrt(2)*erf_inv(2 * probability - 1);
 	}
 }

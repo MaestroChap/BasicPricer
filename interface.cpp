@@ -1,41 +1,53 @@
 #include "interface.hpp"
+#include <typeinfo>
 
-std::string GreekKeyToStr(GreekKey key)
+PricingAnalytics PriceAndGreeks(std::unique_ptr<Option>& option, const std::unique_ptr<QuantModels>& mod)
 {
-	if (key == GreekKey::Price)
-		return "Price";
-	else if (key == GreekKey::Delta)
-		return "Delta";
-	else if (key == GreekKey::Vega)
-		return "Vega";
-	else if (key == GreekKey::Rho)
-		return "Rho";
-	else if (key == GreekKey::Gamma)
-		return "Gamma";
-	else if (key == GreekKey::Theta)
-		return "Theta";
-	else
-		return "Unknown key in greek container";
-}
-double PriceEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod) // Adapt to americanOption
-{
-	return mod->europeanOptionPrice(instr);
+	return mod->setPricingAnalytics(option);
 }
 
-double PriceAmerican(std::unique_ptr<AmericanOption>& instr, const std::unique_ptr<QuantModels>& mod) // Adapt to americanOption
+void Print(PricingAnalytics& pricingAnalytics)
 {
-	return mod->americanOptionPrice(instr);
+    std::cout << "prix : " << pricingAnalytics.price << std::endl;
+
+    for (auto& element : pricingAnalytics.greeks)
+    {
+        std::cout << element.first << " : " << element.second << std::endl;
+    }
+    std::cout << std::endl;
+ }
+
+void PrintOptionParameters(std::unique_ptr<Option>& option)
+{
+    std::string name = GetOptionTypeName(option);
+    std::cout << "Parameters or the " << name << std::endl;
+    std::cout << std::endl;
+    std::cout << "S0: " << option->getS0() << std::endl;
+    std::cout << "Strike : " << option->getStrike() << std::endl;
+    std::cout << "Volatilite : " << option->getVolatility() << std::endl;
+    std::cout << "RiskFreeRate : " << option->getRiskFreeRate() << std::endl;
+    std::cout << "Maturity : " << option->getMaturity() << std::endl;
+    std::cout << std::endl;
 }
 
-GreekContainer PriceAndGreeksEuropean(std::unique_ptr<EuropeanOption>& instr, const std::unique_ptr<QuantModels>& mod)
+std::string GetOptionTypeName(const std::unique_ptr<Option>& option)
 {
-	return mod->europeanOptionGreeks(instr);
+    const std::type_info& optionTypeInfo = typeid(*option);
+
+    if (optionTypeInfo == typeid(EuropeanCall)) {
+        return "European Call Option";
+    }
+    else if (optionTypeInfo == typeid(EuropeanPut)) {
+        return "European Put Option";
+    }
+    else if (optionTypeInfo == typeid(AmericanCall)) {
+        return "American Call Option";
+    }
+    else if (optionTypeInfo == typeid(AmericanPut)) {
+        return "American Put Option";
+    }
+    else {
+        return "Unknown Option Type";
+    }
 }
 
-void display(const GreekContainer& cont)
-{
-	for (auto it = cont.begin(); it != cont.end(); it++)
-	{
-		std::cout << GreekKeyToStr(it->first) << " : " << it->second << std::endl;
-	}
-}
