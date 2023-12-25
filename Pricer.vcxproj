@@ -132,6 +132,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Maths.cpp" />
     <ClCompile Include="QuantModels.cpp" />
+	<ClCompile Include="Stock.cpp" />
+	<ClCompile Include="BrownianMotion1D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Instruments.hpp" />
@@ -139,6 +141,8 @@
     <ClInclude Include="Maths.hpp" />
     <ClInclude Include="QuantModels.hpp" />
     <ClInclude Include="typedefs.hpp" />
+	<ClInclude Include="Stock.hpp" />
+	<ClInclude Include="BrownianMotion1D.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -33,6 +33,9 @@
 	<ClCompile Include="Stock.cpp">
 	  <Filter>Fichiers sources</Filter>
 	</ClCompile>
+	<ClCompile Include="BrownianMotion1D.cpp">
+      <Filter>Fichiers sources</Filter>
+	</ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="QuantModels.hpp">
@@ -53,5 +56,8 @@
 	<ClInclude Include="Stock.hpp">
 	  <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-  </ItemGroup>
+	<ClInclude Include="BrownianMotion1D.hpp">
+	  <Filter>Fichiers d%27en-tête</Filter>
+	</ClInclude>
+</ItemGroup>
 </Project>

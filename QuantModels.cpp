@@ -54,9 +54,8 @@ PricingAnalytics BlackScholes::setPricingAnalytics(std::unique_ptr<Option>& opti
 	}
 	else
 	{
-		double price = UNDEFINITE_TOKEN;
 		option->setPrice( UNDEFINITE_TOKEN );
-		p.price = price;
+		p.price = UNDEFINITE_TOKEN;
 
 		res["Delta"] = UNDEFINITE_TOKEN;
 		res["Vega"] = UNDEFINITE_TOKEN;
@@ -162,16 +161,16 @@ GreekContainer BasicMonteCarlo::greeks(std::unique_ptr<Option>& option)
 	GreekContainer res;
 	std::unique_ptr<Option> bumpedInstr(option->DeepClone());
 
-	double price = pricing(option).first; //Verifier si pas de problème parce qu'on rappelle pricing sur option à la place de le faire sur le deepclone
+	double price = pricing(option).first; //check because we are using pricing function on option and not on the deepclone
 	double priceBumpDelta = pricingForGreeks(option, "Delta");
 	double priceBumpVega = pricingForGreeks(option, "Vega");
 	double priceBumpTheta = pricingForGreeks(option, "Theta");
 	double priceBumpRho = pricingForGreeks(option, "Rho");
 	double priceBumpGamma = pricingForGreeks(option, "Gamma");
 
-	m_SpaceStep = -m_SpaceStep;
+	m_SpaceStep =- m_SpaceStep;
 	double priceDumpGamma = pricingForGreeks(option, "Gamma"); //False gamma
-	m_SpaceStep = -m_SpaceStep;
+	m_SpaceStep =- m_SpaceStep;
 
 	double delta = (priceBumpDelta - price) / m_SpaceStep;
 	double vega = (priceBumpVega - price) / m_SpaceStep;
@@ -207,137 +206,103 @@ std::pair<double, GreekContainer> CRR::pricing(std::unique_ptr<Option>& option)
 	std::pair<double, GreekContainer> pair_gen;
 	GreekContainer greeks;
 	EuropeanOption* euroOption = dynamic_cast<EuropeanOption*>(option.get());
+
+	double S_0{ option->getS0() };
+	double K{ option->getStrike() };
+	double vol{ option->getVolatility() };
+	double rfr{ option->getRiskFreeRate() };
+	double mat{ option->getMaturity() };
+
+	double u = exp(vol * std::sqrt(mat / m_step));
+	double d = exp(-vol * std::sqrt(mat / m_step));
+	double p = (exp(rfr * (mat / m_step)) - d) / (u - d);
+	double f11 = 0, f10 = 0, f22 = 0, f21 = 0, f20 = 0;
+
+
+	std::vector<double> payoffVector;
+	std::vector<double> priceVector;
+
 	if (euroOption)
 	{
-		double S_0{ option->getS0() };
-		double K{ option->getStrike() };
-		double vol{ option->getVolatility() };
-		double rfr{ option->getRiskFreeRate() };
-		double mat{ option->getMaturity() };
-
-		double u = exp(vol * std::sqrt(mat / m_step));
-		double d = exp(-vol * std::sqrt(mat / m_step));
-		double p = (exp(rfr * (mat / m_step)) - d) / (u - d);
-
-		double price = 0;
-		double delta = 0;
-		double gamma = 0;
-		double theta = 0;
-		double f11 = 0;
-		double f10 = 0;
-		double f22 = 0;
-		double f21 = 0;
-		double f20 = 0;
-
-		std::vector<double> U;
+		std::cout << "European option " << std::endl;
 		for (int i = 0; i < m_step + 1; i++)
 		{
-			U.push_back(std::max(option->getOptionSign() * (S_0 * pow(u, m_step - i) * pow(d, i) - K), 0.));
+			payoffVector.push_back(std::max(option->getOptionSign() * (S_0 * pow(u, m_step - i) * pow(d, i) - K), 0.));
 		}
+
 		for (int i = m_step - 1; i > -1; i--)
 		{
 			if (i == 0)
 			{
-				f11 = U[0];
-				f10 = U[1];
+				f11 = payoffVector[0];
+				f10 = payoffVector[1];
 			}
 			if (i == 1)
 			{
-				f22 = U[0];
-				f21 = U[1];
-				f20 = U[2];
+				f22 = payoffVector[0];
+				f21 = payoffVector[1];
+				f20 = payoffVector[2];
 			}
 			for (int j = 0; j < i + 1; j++)
 			{
-				U[j] = option->getOptionSign() * exp(-rfr * mat / m_step) * (p * U[j] + (1 - p) * U[j + 1]);
+				payoffVector[j] = option->getOptionSign() * exp(-rfr * mat / m_step) * (p * payoffVector[j] + (1 - p) * payoffVector[j + 1]);
 			}
-			U.pop_back();
+			payoffVector.pop_back();
 		}
-		price = U[0];
-		delta = (f11 - f10) / (S_0 * u - S_0 * d);
-		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
-		theta = (f21 - price) / (2 * mat / m_step);
-		option->setPrice(price);
-
-		pair_gen.first = price;
-
-		greeks["Delta"] = delta;
-		greeks["Gamma"] = gamma;
-		greeks["Theta"] = theta;
-		pair_gen.second = greeks;
-
-		return pair_gen;
 	}
 	else
 	{
-		std::pair<double, GreekContainer> pair_gen;
-		GreekContainer greeks;
-		double S_0{ option->getS0() };
-		double K{ option->getStrike() };
-		double vol{ option->getVolatility() };
-		double rfr{ option->getRiskFreeRate() };
-		double mat{ option->getMaturity() };
-
-		double u = exp(vol * std::sqrt(mat / m_step));
-		double d = exp(-vol * std::sqrt(mat / m_step));
-		double p = (exp(rfr * (mat / m_step)) - d) / (u - d);
-
-		//Grecques
-
-		double price = 0;
-		double delta = 0;
-		double gamma = 0;
-		double theta = 0;
-		double f11 = 0;
-		double f10 = 0;
-		double f22 = 0;
-		double f21 = 0;
-		double f20 = 0;
-
-		std::vector<double> U;
 		for (int i = 0; i < m_step + 1; i++)
 		{
-			U.push_back(std::max(option->getOptionSign() * (S_0 * pow(u, m_step - i) * pow(d, i) - K), 0.));
+			payoffVector.push_back(std::max(option->getOptionSign() * (S_0 * pow(u, m_step - i) * pow(d, i) - K), 0.));
+			priceVector.push_back((S_0 * pow(u, m_step - i) * pow(d, i)));
 		}
-		
+
 		for (int i = m_step - 1; i > -1; i--)
 		{
 			if (i == 0)
 			{
-				f11 = U[0];
-				f10 = U[1];
+				f11 = payoffVector[0];
+				f10 = payoffVector[1];
 			}
 			if (i == 1)
 			{
-				f22 = U[0];
-				f21 = U[1];
-				f20 = U[2];
+				f22 = payoffVector[0];
+				f21 = payoffVector[1];
+				f20 = payoffVector[2];
 			}
+
 			for (int j = 0; j < i + 1; j++)
 			{
-				U[j] = std::max(std::max(option->getOptionSign() * (S_0 * pow(u, i - j) * pow(d, j) - K), 0.), exp(-rfr * mat / m_step) * (p * U[j] + (1 - p) * U[j + 1]));
+				priceVector[j] = priceVector[j] / u;
+				payoffVector[j] = std::max(option->getOptionSign() * (priceVector[j] - S_0), exp(-rfr * mat / m_step) * (p * payoffVector[j] + (1 - p) * payoffVector[j + 1]));
 			}
-			U.pop_back();
+			payoffVector.pop_back();
+			priceVector.pop_back();
 		}
-		price = U[0];
-		delta = (f11 - f10) / (S_0 * u - S_0 * d);
-		gamma = ((f22 - f21) / (S_0 * pow(u, 2) - S_0) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) * (1 / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2))));
-		theta = (f21 - price) / (2 * mat / m_step);
-		option->setPrice(price);
-
-		pair_gen.first = price;
-
-		greeks["Delta"] = delta;
-		greeks["Gamma"] = gamma;
-		greeks["Theta"] = theta; // Problème avec le theta 70%
-		pair_gen.second = greeks;
-		return pair_gen;
 	}
+		
+	double price = payoffVector[0];
+	option->setPrice(price);
+
+	double delta = option->getOptionSign()*(f11 - f10) / (S_0 * u - S_0 * d);
+	double gamma = (((f22 - f21) / (S_0 * pow(u, 2) - S_0)) - ((f21 - f20) / (S_0 - S_0 * pow(d, 2)))) / (0.5 * (S_0 * pow(u, 2) - S_0 * pow(d, 2)));
+	double theta = -(f21 - price) / (2 * (mat / m_step));
+
+	pair_gen.first = price;
+
+	greeks["Delta"] = delta;
+	greeks["Gamma"] = gamma;
+	greeks["Theta"] = theta;
+	pair_gen.second = greeks;
+
+	return pair_gen;
+
 }
 
 GreekContainer CRR::greeks(std::unique_ptr<Option>& option)
 {
-	GreekContainer g;
+	GreekContainer greeks;
 	std::unique_ptr<Option> bumpedInstrVega(option->DeepClone());
 	std::unique_ptr<Option> bumpedInstrRho(option->DeepClone());
 	double price = pricing(option).first;
@@ -348,12 +313,13 @@ GreekContainer CRR::greeks(std::unique_ptr<Option>& option)
 	double priceBumpVega = pricing(bumpedInstrVega).first;
 	double priceBumpRho = pricing(bumpedInstrRho).first;
 
-	double vega = (priceBumpVega - price)/m_SpaceStep; // Problème avec le vega 100%
-	double rho = (priceBumpRho - price) / m_SpaceStep; // Problème avec le rho 100%
+	double vega = (priceBumpVega - price) / m_SpaceStep;
+	double rho = (priceBumpRho - price) / m_SpaceStep;
 
-	g["Vega"] = vega;
-	g["Rho"] = rho;
-	return g;
+	greeks["Vega"] = vega;
+	greeks["Rho"] = rho;
+
+	return greeks;
 }
 
 PricingAnalytics CRR::setPricingAnalytics(std::unique_ptr<Option>& option)

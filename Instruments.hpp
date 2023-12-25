@@ -71,7 +71,7 @@ public:
 class EuropeanCall : public EuropeanOption
 {
 public:
-	EuropeanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate) : EuropeanOption(S0, strike, volatility, maturity, riskFreeRate) {};
+	EuropeanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate) : EuropeanOption(S0, strike, volatility, maturity, riskFreeRate) {}
 	EuropeanCall(const EuropeanCall& option) : EuropeanOption(option) {};
 	virtual EuropeanCall* DeepClone() const override { return new EuropeanCall(*this); }
 	virtual double getOptionSign() const override { return 1.; }
@@ -80,7 +80,7 @@ public:
 class EuropeanPut : public EuropeanOption
 {
 public:
-	EuropeanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : EuropeanOption(S0, strike, volatility, maturity, riskFreeRate) {};
+	EuropeanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : EuropeanOption(S0, strike, volatility, maturity, riskFreeRate) {}
 	EuropeanPut(const EuropeanCall& option) : EuropeanOption(option) {};
 	virtual EuropeanPut* DeepClone() const override { return new EuropeanPut(*this); }
 	virtual double getOptionSign() const override { return -1.; }
@@ -107,17 +107,18 @@ public:
 class AmericanCall : public AmericanOption
 {
 public:
-	AmericanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate) {};
-	AmericanCall(const AmericanCall& option) : AmericanOption(option) {};
+	AmericanCall(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate) {}
+	AmericanCall(const AmericanCall& option) : AmericanOption(option) {}
 	virtual AmericanCall* DeepClone() const override { return new AmericanCall(*this); }
-	virtual double getOptionSign() const override { return 1.; };
+	virtual double getOptionSign() const override { return 1.; }
 };
 
 class AmericanPut : public AmericanOption
 {
 public:
-	AmericanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate) {};
-	AmericanPut(const AmericanPut& option) : AmericanOption(option) {};
+	AmericanPut(double S0, double strike, double volatility, double maturity, double riskFreeRate) : AmericanOption(S0, strike, volatility, maturity, riskFreeRate) {}
+	AmericanPut(const AmericanPut& option) : AmericanOption(option) {}
 	virtual AmericanPut* DeepClone() const override { return new AmericanPut(*this); }
 	virtual double getOptionSign() const override { return -1.; }
 };
+

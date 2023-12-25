@@ -20,6 +20,7 @@ struct PricingAnalytics
 
 using PricingAnalytics = struct PricingAnalytics;
 
+/*
 struct OptionParameters
 {
 	double S0;
@@ -28,3 +29,5 @@ struct OptionParameters
 	double maturity;
 	double riskFreeRate;
 };
+*/
+

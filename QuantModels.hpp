@@ -8,7 +8,7 @@
 class QuantModels
 {
 public:
-	QuantModels( double spaceStep) : m_SpaceStep(spaceStep) {};
+	QuantModels(double spaceStep) : m_SpaceStep(spaceStep) {};
 	virtual PricingAnalytics setPricingAnalytics(std::unique_ptr<Option>& option) = 0;
 protected:
 	double m_SpaceStep; // for greeks computation
